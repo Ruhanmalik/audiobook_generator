@@ -1,4 +1,5 @@
 venv/
-*.txt
+output.txt
+src.txt
 *wav
 *.epub
