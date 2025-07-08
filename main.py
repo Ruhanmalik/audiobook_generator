@@ -2,6 +2,54 @@ import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import re
+import os
+from kokoro import KPipeline
+import soundfile as sf
+
+def tts(text):
+    """
+    Convert text file to audio using Kokoro TTS
+    """
+        
+    print("Converting text to audio...")
+
+    pipeline = KPipeline(lang_code='a')
+    try:
+        # Read the text file
+        with open(text, "r", encoding="utf-8") as f:
+            text = f.read()
+
+            generator = pipeline(text, voice=voice, speed=speed)
+            audio_segments = []
+
+            for i, (gs, ps, audio) in enumerate(generator):
+                audio_segments.append(audio)
+                sf.write(f'chunk_{i}.wav', audio, 24000)
+
+            # Combine all chunks into one file using FFmpeg
+            print("Combining audio chunks...")
+            
+            # Create a file list for FFmpeg
+            with open('filelist.txt', 'w') as f:
+                for i in range(len(audio_segments)):
+                    f.write(f"file 'chunk_{i}.wav'\n")
+            
+            # Use FFmpeg to concatenate all chunks
+            os.system('ffmpeg -f concat -safe 0 -i filelist.txt -c copy output_audio.wav')
+            
+            # Clean up temporary files
+            for i in range(len(audio_segments)):
+                if os.path.exists(f'chunk_{i}.wav'):
+                    os.remove(f'chunk_{i}.wav')
+            
+            if os.path.exists('filelist.txt'):
+                os.remove('filelist.txt')
+            
+            print("Audio successfully combined into output_audio.wav")
+        
+    except Exception as e:
+        print(f"Error in TTS conversion: {e}")
+        return None
 
 
 def clean_text(text):
@@ -29,9 +77,25 @@ def scrape(book):
 
 
 
+def main():
+    book = epub.read_epub(r'C:\Users\Ruhan Malik\Desktop\Projects\Python\audiobook_generator\LOTM_vol1.epub')
 
-book = epub.read_epub(r'C:\Users\Ruhan Malik\Desktop\Projects\Python\audiobook_generator\LOTM_vol1.epub')
-scrape(book)
+    if not os.path.exists(book):
+        print("EPUB not found")
+        return
+    
+    try:
+        scrape(book)
+    except Exception as e:
+        print(f"Error reading EPUB: {e}")        
+    if os.path.exists("output.txt"):
+        print("Converting text to audio...")
+        
+        tts("output.txt")
+    else:
+        print("No output.txt file found. Please run the scraper first.")
+
+main()
 
 '''
 def scrape(book):
