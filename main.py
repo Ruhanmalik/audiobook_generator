@@ -1,11 +1,27 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
+
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import re
-import os
 from kokoro import KPipeline
 import soundfile as sf
 import numpy as np
+import torch
+import torch.version
+
+def check_gpu():
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        print(f"GPU detected: {torch.cuda.get_device_name(0)}")
+        print(f"CUDA Version: {torch.version.cuda}")
+        return device
+    else:
+        device = torch.device('cpu')
+        print("No GPU detected, using CPU")
+        return device
 
 def chunk(text, max_length):
     sentences = re.split(r'(?<=[.!?])\s+', text)
@@ -25,11 +41,11 @@ def chunk(text, max_length):
     
     return chunks
 
-def tts(text ,voice, speed, max_chunk_size):
+def tts(text ,voice, speed, max_chunk_size, device):
     #Convert text file to audio using Kokoro TTS
     print("Converting text to audio...")
 
-    pipeline = KPipeline(lang_code='a')
+    pipeline = KPipeline(lang_code='a', device=device)
     try:
         # Read the text file
         with open(text, "r", encoding="utf-8") as f:
@@ -43,8 +59,13 @@ def tts(text ,voice, speed, max_chunk_size):
                 print(f"Processing chunk {chunk_id + 1} / {len(text_chunks)}")
 
                 try:
-                    generator = pipeline(text_chunk, voice=voice, speed=speed)
-                    audio_segments = []
+                    if device.type == 'cuda':
+                        with torch.cuda.amp.autocast():
+                            generator = pipeline(text_chunk, voice=voice, speed=speed)
+                            audio_segments = []
+                    else:
+                        generator = pipeline(text_chunk, voice=voice, speed=speed)
+                        audio_segments = []
 
                     for i, (gs, ps, audio) in enumerate(generator):
                         audio_segments.append(audio)
@@ -54,6 +75,9 @@ def tts(text ,voice, speed, max_chunk_size):
                         chunk_filename = f'chunk_{chunk_id + 1:04d}.wav'
                         sf.write(chunk_filename, combined_audio, 24000)
                         all_audio_files.append(chunk_filename)
+
+                        if device.type == 'cuda' and chunk_id % 10 == 0:
+                            torch.cuda.empty_cache()
 
                 except Exception as e:
                     print(f"Error in processing chunks: {e}")
@@ -69,7 +93,8 @@ def tts(text ,voice, speed, max_chunk_size):
                         f.write(f"file '{audio_file}'\n")
                     
                     # Use FFmpeg to concatenate all chunks
-                result = os.system('ffmpeg -f concat -safe 0 -i filelist.txt -c copy audiobook.wav')
+                #result = os.system('ffmpeg -f concat -safe 0 -i filelist.txt -c copy audiobook.wav')
+                result = os.system('ffmpeg -f concat -safe 0 -i filelist.txt -c:a libmp3lame -b:a 128k -y audiobook.mp3')
                     
                 if result == 0:
                     print("Audio succesfully combined into audiobook.wav")  
@@ -107,10 +132,10 @@ def clean_text(text):
 def scrape(book):
 
     with open('output.txt', 'w', encoding='utf-8') as f:
-
+        skip_files = ['index_split_004.html']
         chapter_count = 0
         for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
-            if item.get_name() == 'index_split_004.html':
+            if item.get_name() in skip_files:
                 continue
     
             soup = BeautifulSoup(item.get_content(), 'html.parser')
@@ -128,6 +153,8 @@ def scrape(book):
 
 def main():
     
+    device = check_gpu()
+
     path = r'C:\Users\Ruhan Malik\Desktop\Projects\Python\audiobook_generator\LOTM_vol1.epub'
 
 
@@ -143,8 +170,8 @@ def main():
         voice = 'af_sarah'
         speed = 1.0
         print(f"Starting TTS conversion with voice: {voice} at speed {speed}.")
-        chunk_size = 50000
-        tts("output.txt", voice, speed, chunk_size)
+        chunk_size = 100000 if device.type == 'cuda' else 50000
+        tts("output.txt", voice, speed, chunk_size, device)
     else:
         print("No output.txt file found. Text extraction may have failed.")
 
