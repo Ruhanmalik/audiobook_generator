@@ -13,7 +13,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "Ruhanmalik",
+    "name": "Ruhan Malik",
     "email": "aruhanmalik@gmail.com"
   },
   "license": "MIT",
@@ -27,7 +27,8 @@
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron-forge/plugin-vite": "^7.10.2",
     "@electron/fuses": "^1.8.0",
-    "electron": "38.4.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "electron": "39.1.0",
     "vite": "^5.4.21"
   },
   "dependencies": {

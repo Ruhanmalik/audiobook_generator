@@ -1,4 +1,3 @@
-
 # Logs
 logs
 *.log
@@ -91,4 +90,3 @@ typings/
 
 # Electron-Forge
 out/
->>>>>>> bd6398f (start electron)
