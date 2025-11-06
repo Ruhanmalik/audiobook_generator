@@ -2,8 +2,10 @@ import "../css/nav.css";
 
 export default function Nav() {
   return (
-    <div>
-      <a href="/">Epub Audio</a>
-    </div>
+    <nav className="navbar">
+      <div className="nav-container">
+        <a href="/" className="nav-logo">EPUB Audio</a>
+      </div>
+    </nav>
   );
 }
