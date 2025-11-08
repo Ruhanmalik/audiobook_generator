@@ -3,28 +3,49 @@ import { useState } from 'react';
 import '../css/home.css';
 
 function Home() {
-    const [File, setFile] = useState(null);
+
+    const CONST_BASE_URL = 'http://localhost:8000';
+
+    const [file, setFile] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(false);
 
     const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
+        const selectedFile = e.target.files[0];
+        if (selectedFile && selectedFile.name.endsWith('.epub')) {
+            setFile(selectedFile);
+            setError(null);
+        } else {
+            setError('Please select a valid EPUB file');
+            setFile(null);
+        }
     };
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (!File) {
             alert('Please select a file first');
             return;
         }
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
         const formData = new FormData();
         formData.append('file', File);
 
-        axios.post('/text', formData)
-        .then(response => {
+        
+        try {
+            const response = await axios.post(`${CONST_BASE_URL}/text`, formData);
             console.log(response.data);
-        })
-        .catch(error => {
+            setSuccess(true);
+        } catch (error) {
             console.error(error);
-        });
-    }
+            setError(error.response?.data?.message || 'Upload failed');
+        } finally {
+            setLoading(false);
+        };
+    };
     return (
         <div className="home-container">
             <div className="home-content">
@@ -39,13 +60,20 @@ function Home() {
                             accept=".epub" 
                             onChange={handleFileChange}
                             className="file-input"
+                            disabled={loading}
                         />
                     </label>
-                    {File && (
-                        <p className="file-name">{File.name}</p>
+                    {file && (
+                        <p className="file-name">{file.name}</p>
                     )}
-                    <button onClick={handleUpload} className="upload-button">
-                        Upload & Convert
+                    {error && <p className="error-message">{error}</p>}
+                    {success && <p className="success-message">Conversion started successfully!</p>}
+                    <button 
+                        onClick={handleUpload} 
+                        className="upload-button"
+                        disabled={loading || !file}
+                    >
+                        {loading ? 'Converting...' : 'Upload & Convert'}
                     </button>
                 </div>
             </div>
