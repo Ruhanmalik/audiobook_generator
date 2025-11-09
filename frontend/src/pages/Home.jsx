@@ -23,7 +23,7 @@ function Home() {
     };
 
     const handleUpload = async () => {
-        if (!File) {
+        if (!file) {
             alert('Please select a file first');
             return;
         }
@@ -32,7 +32,7 @@ function Home() {
         setSuccess(false);
 
         const formData = new FormData();
-        formData.append('file', File);
+        formData.append('file', file);
 
         
         try {
@@ -41,10 +41,10 @@ function Home() {
             setSuccess(true);
         } catch (error) {
             console.error(error);
-            setError(error.response?.data?.message || 'Upload failed');
+            setError(error.response?.data?.detail || error.response?.data?.message || 'Upload failed');
         } finally {
             setLoading(false);
-        };
+        }
     };
     return (
         <div className="home-container">

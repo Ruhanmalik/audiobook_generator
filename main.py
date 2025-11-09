@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -12,7 +12,7 @@ app.add_middleware(
 )
 
 @app.post("/text")
-async def read_root(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...)):
     content = await file.read()
     return {"filename": file.filename, "size": len(content)}
 
