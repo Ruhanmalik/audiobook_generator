@@ -1,0 +1,7 @@
+venv/
+output.txt
+src.txt
+*wav
+*.epub
+test.py
+*.mp3
