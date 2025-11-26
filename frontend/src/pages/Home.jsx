@@ -36,7 +36,7 @@ function Home() {
 
         
         try {
-            const response = await axios.post(`${CONST_BASE_URL}/text`, formData);
+            const response = await axios.post(`${CONST_BASE_URL}/extract`, formData);
             console.log(response.data);
             setSuccess(true);
         } catch (error) {
