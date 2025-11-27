@@ -56,6 +56,9 @@ function Home() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [conversionProgress, setConversionProgress] = useState(0);
+    const [taskId, setTaskId] = useState(null);
+    const [outputFilename, setOutputFilename] = useState(null);
+    const [progressMessage, setProgressMessage] = useState('');
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -110,29 +113,78 @@ function Home() {
         setLoading(true);
         setError(null);
         setConversionProgress(0);
+        setProgressMessage('Starting conversion...');
         setCurrentStep(3);
+        setOutputFilename(null);
 
         try {
-            await axios.post(
-                `${CONST_BASE_URL}/convert`,
-                {
-                    text: textContent,
-                    filename: file?.name,
-                },
-                {
-                    onUploadProgress: (progressEvent) => {
-                        if (!progressEvent.total) return;
-                        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        setConversionProgress(progress);
-                    },
-                },
-            );
-            setConversionProgress(100);
+            const response = await axios.post(`${CONST_BASE_URL}/convert`, {
+                text: textContent,
+                filename: file?.name,
+            });
+            
+            const newTaskId = response.data.task_id;
+            setTaskId(newTaskId);
+            
+            // Start polling for progress
+            pollProgress(newTaskId);
         } catch (err) {
             console.error(err);
             setError(err.response?.data?.detail || err.response?.data?.message || 'Conversion failed');
-        } finally {
             setLoading(false);
+        }
+    };
+
+    const pollProgress = async (taskId) => {
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await axios.get(`${CONST_BASE_URL}/progress/${taskId}`);
+                const progressData = response.data;
+                
+                setConversionProgress(progressData.progress || 0);
+                setProgressMessage(progressData.message || 'Processing...');
+                
+                if (progressData.status === 'completed') {
+                    clearInterval(pollInterval);
+                    setLoading(false);
+                    setOutputFilename(progressData.output_file);
+                    setProgressMessage('Conversion complete!');
+                } else if (progressData.status === 'failed') {
+                    clearInterval(pollInterval);
+                    setLoading(false);
+                    setError(progressData.error || 'Conversion failed');
+                }
+            } catch (err) {
+                console.error('Error polling progress:', err);
+                // Don't clear interval on error, keep trying
+            }
+        }, 1000); // Poll every second
+    };
+
+    const handleDownload = () => {
+        if (!outputFilename) return;
+        window.open(`${CONST_BASE_URL}/download/${outputFilename}`, '_blank');
+    };
+
+    const handleOpenFileLocation = async () => {
+        if (!outputFilename) return;
+        // Use Electron API if available, otherwise fallback to download
+        if (window.electron && window.electron.showItemInFolder) {
+            try {
+                const result = await window.electron.showItemInFolder(`output/${outputFilename}`);
+                if (!result.success) {
+                    console.error('Failed to open file location:', result.error);
+                    // Fallback to download
+                    handleDownload();
+                }
+            } catch (err) {
+                console.error('Error opening file location:', err);
+                // Fallback to download
+                handleDownload();
+            }
+        } else {
+            // Fallback to download if Electron API not available
+            handleDownload();
         }
     };
 
@@ -150,6 +202,9 @@ function Home() {
         setConversionProgress(0);
         setError(null);
         setLoading(false);
+        setTaskId(null);
+        setOutputFilename(null);
+        setProgressMessage('');
     };
 
     return (
@@ -218,21 +273,32 @@ function Home() {
                                     {conversionProgress >= 12 && `${conversionProgress}%`}
                                 </div>
                             </div>
+                            {progressMessage && (
+                                <p className="progress-hint">{progressMessage}</p>
+                            )}
                             {loading && conversionProgress < 100 && (
                                 <p className="progress-hint">Converting… Please wait</p>
                             )}
-                            {conversionProgress === 100 && (
+                            {conversionProgress === 100 && !loading && (
                                 <p className="success-message">Conversion complete! ✓</p>
                             )}
                         </div>
                         {error && <p className="error-message">{error}</p>}
                         <div className="button-row">
-                            {conversionProgress === 100 ? (
-                                <button onClick={resetProcess} className="primary-button">
-                                    Convert Another File
-                                </button>
+                            {conversionProgress === 100 && !loading ? (
+                                <>
+                                    <button onClick={handleDownload} className="secondary-button">
+                                        Download Audio
+                                    </button>
+                                    <button onClick={handleOpenFileLocation} className="secondary-button">
+                                        Open File Location
+                                    </button>
+                                    <button onClick={resetProcess} className="primary-button">
+                                        Convert Another File
+                                    </button>
+                                </>
                             ) : (
-                                <button onClick={goBack} className="ghost-button">
+                                <button onClick={goBack} className="ghost-button" disabled={loading}>
                                     Back to Edit
                                 </button>
                             )}

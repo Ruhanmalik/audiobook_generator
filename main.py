@@ -1,22 +1,28 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
-import os
 import re
 import soundfile as sf
 import numpy as np
 import torch
 import torch.version
 from kokoro import KPipeline
+import uuid
+import threading
+from typing import Dict
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
 
 app = FastAPI()
+
+# Store progress for each conversion task
+conversion_progress: Dict[str, dict] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -122,18 +128,36 @@ def chunk(text, max_length):
     
     return chunks
 
-def tts_from_text(text_content, output_filename, voice, speed, max_chunk_size, device):
+def tts_from_text(text_content, output_filename, voice, speed, max_chunk_size, device, task_id: str):
     """Convert text content to audio using Kokoro TTS"""
     print("Converting text to audio...")
+    
+    # Initialize progress
+    conversion_progress[task_id] = {
+        "status": "processing",
+        "progress": 0,
+        "current_chunk": 0,
+        "total_chunks": 0,
+        "message": "Initializing...",
+        "output_file": None,
+        "error": None
+    }
 
     pipeline = KPipeline(lang_code='a', device=device)
     try:
         text_chunks = chunk(text_content, max_chunk_size)
-        print(f"Split into {len(text_chunks)} chunks")
+        total_chunks = len(text_chunks)
+        conversion_progress[task_id]["total_chunks"] = total_chunks
+        conversion_progress[task_id]["message"] = f"Processing {total_chunks} chunks..."
+        print(f"Split into {total_chunks} chunks")
         all_audio_files = []
 
         for chunk_id, text_chunk in enumerate(text_chunks):
-            print(f"Processing chunk {chunk_id + 1} / {len(text_chunks)}")
+            conversion_progress[task_id]["current_chunk"] = chunk_id + 1
+            progress = int(((chunk_id + 1) / total_chunks) * 90)  # Reserve 10% for combining
+            conversion_progress[task_id]["progress"] = progress
+            conversion_progress[task_id]["message"] = f"Processing chunk {chunk_id + 1} of {total_chunks}..."
+            print(f"Processing chunk {chunk_id + 1} / {total_chunks}")
 
             try:
                 if device.type == 'cuda':
@@ -162,6 +186,8 @@ def tts_from_text(text_content, output_filename, voice, speed, max_chunk_size, d
 
         if all_audio_files:
             # Combine all chunks into one file using FFmpeg
+            conversion_progress[task_id]["progress"] = 95
+            conversion_progress[task_id]["message"] = "Combining audio chunks..."
             print("Combining audio chunks...")
                 
             # Create a file list for FFmpeg
@@ -184,22 +210,35 @@ def tts_from_text(text_content, output_filename, voice, speed, max_chunk_size, d
                 if os.path.exists('output/filelist.txt'):
                     os.remove('output/filelist.txt')
                 
+                conversion_progress[task_id]["status"] = "completed"
+                conversion_progress[task_id]["progress"] = 100
+                conversion_progress[task_id]["message"] = "Conversion complete!"
+                conversion_progress[task_id]["output_file"] = output_filename
                 return True
             else:
                 print("FFmpeg failed")
+                conversion_progress[task_id]["status"] = "failed"
+                conversion_progress[task_id]["error"] = "FFmpeg failed to combine audio files"
                 return False
         else:
             print("No audio files were generated successfully.")
+            conversion_progress[task_id]["status"] = "failed"
+            conversion_progress[task_id]["error"] = "No audio files were generated"
             return False
                 
     except Exception as e:
         print(f"Error in TTS conversion: {e}")
+        conversion_progress[task_id]["status"] = "failed"
+        conversion_progress[task_id]["error"] = str(e)
         return False
 
 @app.post("/convert")
-async def convert_text(request: ConvertRequest):
+async def convert_text(request: ConvertRequest, background_tasks: BackgroundTasks):
     """Convert the edited text to audiobook"""
     device = check_gpu()
+    
+    # Generate unique task ID
+    task_id = str(uuid.uuid4())
     
     try:
         # Use the text directly from the request
@@ -215,18 +254,43 @@ async def convert_text(request: ConvertRequest):
         print(f"Starting TTS conversion with voice: {voice} at speed {speed}.")
         chunk_size = 100000 if device.type == 'cuda' else 50000
         
-        # Convert text to audio
-        success = tts_from_text(text_content, output_filename, voice, speed, chunk_size, device)
+        # Run conversion in background thread
+        def run_conversion():
+            tts_from_text(text_content, output_filename, voice, speed, chunk_size, device, task_id)
         
-        if success:
-            return {
-                "message": "Text converted successfully", 
-                "output": output_filename,
-                "path": f"output/{output_filename}"
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Audio conversion failed")
+        thread = threading.Thread(target=run_conversion)
+        thread.start()
+        
+        return {
+            "message": "Conversion started",
+            "task_id": task_id
+        }
             
     except Exception as e:
         print(f"Error in convert endpoint: {e}")
+        conversion_progress[task_id] = {
+            "status": "failed",
+            "error": str(e)
+        }
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/progress/{task_id}")
+async def get_progress(task_id: str):
+    """Get the progress of a conversion task"""
+    if task_id not in conversion_progress:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return conversion_progress[task_id]
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    """Download the generated audio file"""
+    file_path = f"output/{filename}"
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(
+        file_path,
+        media_type="audio/mpeg",
+        filename=filename
+    )

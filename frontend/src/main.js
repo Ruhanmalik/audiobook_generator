@@ -1,6 +1,10 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
+import { fileURLToPath } from 'url';
 import started from 'electron-squirrel-startup';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -49,6 +53,36 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+// IPC handlers for file operations
+ipcMain.handle('show-item-in-folder', async (event, relativePath) => {
+  try {
+    // Get the project root directory (assuming main.py is in the root)
+    const projectRoot = path.resolve(__dirname, '../../..');
+    const filePath = path.join(projectRoot, relativePath);
+    
+    // Show the file in the system file manager
+    shell.showItemInFolder(filePath);
+    return { success: true, path: filePath };
+  } catch (error) {
+    console.error('Error showing file in folder:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('open-file', async (event, relativePath) => {
+  try {
+    const projectRoot = path.resolve(__dirname, '../../..');
+    const filePath = path.join(projectRoot, relativePath);
+    
+    // Open the file with the default application
+    shell.openPath(filePath);
+    return { success: true, path: filePath };
+  } catch (error) {
+    console.error('Error opening file:', error);
+    return { success: false, error: error.message };
   }
 });
 
