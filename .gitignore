@@ -5,3 +5,5 @@ src.txt
 *.epub
 test.py
 *.mp3
+output/
+uploads/
