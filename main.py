@@ -4,6 +4,11 @@ import os
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
+import os
+import re
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'
 
 app = FastAPI()
 
@@ -14,6 +19,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def clean_text(text):
+    # Remove excessive whitespace and newlines
+    text = re.sub(r'\s+', ' ', text.strip())
+    # Replace censored words (e.g., "F * ck" -> "Fuck")
+    text = re.sub(r'F\s*\*\s*ck', 'Fuck', text)
+    # Remove or replace special characters that might disrupt TTS
+    text = re.sub(r'[^\w\s.,!?]', '', text)
+    # Normalize punctuation spacing (e.g., "Pain!So" -> "Pain! So")
+    text = re.sub(r'([!?.])(\w)', r'\1 \2', text)  # Capture word character in group 2
+    return text
 
 @app.post("/extract")
 async def upload_file(file: UploadFile = File(...)):
@@ -55,8 +71,9 @@ async def upload_file(file: UploadFile = File(...)):
                 # Clean text
                 text = soup.get_text(separator=' ', strip=True)
 
+                cleaned = clean_text(text)
                 # Write with spacing between chapters
-                f.write(text + "\n\n")
+                f.write(cleaned + "\n\n")
 
     return {"message": "EPUB extracted successfully", "output": txt_filename}
 
