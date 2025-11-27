@@ -1,0 +1,322 @@
+.home-container {
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #050505 0%, #101010 50%, #050505 100%);
+  padding: 0 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  color: #f5f5f5;
+}
+
+.home-content {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.home-title {
+  text-align: center;
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+
+.card {
+  background: rgba(15, 15, 15, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card-subtitle {
+  text-align: center;
+  color: #c7c7c7;
+  font-size: 1rem;
+}
+
+.file-label {
+  display: block;
+  cursor: pointer;
+}
+
+.file-label-text {
+  display: block;
+  width: 100%;
+  padding: 1.25rem;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: #f5f5f5;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+  font-weight: 500;
+  transition: all 0.25s ease;
+}
+
+.file-label:hover .file-label-text {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.file-input {
+  display: none;
+}
+
+.file-name {
+  font-size: 0.95rem;
+  color: #dcdcdc;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  word-break: break-all;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  border: none;
+  border-radius: 12px;
+  padding: 0.9rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primary-button {
+  background: linear-gradient(120deg, #4f8bff, #3358ff);
+  color: #ffffff;
+  box-shadow: 0 15px 25px rgba(51, 88, 255, 0.3);
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 35px rgba(51, 88, 255, 0.35);
+}
+
+.primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.ghost-button {
+  background: transparent;
+  color: #d5d5d5;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ghost-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.error-message {
+  color: #ff7b7b;
+  text-align: center;
+  font-weight: 500;
+}
+
+.success-message {
+  color: #6fe0a8;
+  text-align: center;
+  font-weight: 600;
+}
+
+.text-editor {
+  width: 100%;
+  min-height: 22rem;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(5, 5, 5, 0.75);
+  color: #f5f5f5;
+  font-family: 'Menlo', 'Fira Code', monospace;
+  font-size: 0.95rem;
+  padding: 1.25rem;
+  line-height: 1.6;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.text-editor:focus {
+  outline: none;
+  border-color: rgba(79, 139, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(79, 139, 255, 0.2);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.step-indicator {
+  padding: 1.25rem 2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 20px;
+  margin: 2rem auto 0;
+  width: 100%;
+  max-width: 960px;
+}
+
+.step-track {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.step-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 0 0.5rem;
+}
+
+.step-line {
+  position: absolute;
+  top: 34px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.step-line-completed {
+  background: linear-gradient(90deg, #4f8bff, #3358ff);
+  box-shadow: 0 0 10px rgba(79, 139, 255, 0.45);
+}
+
+.step-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+  z-index: 1;
+}
+
+.step-active {
+  border-color: transparent;
+  background: linear-gradient(120deg, #4f8bff, #3358ff);
+  color: #ffffff;
+  box-shadow: 0 12px 20px rgba(51, 88, 255, 0.35);
+}
+
+.step-completed {
+  border-color: transparent;
+  background: linear-gradient(120deg, #3dc9a7, #2ea880);
+  color: #ffffff;
+}
+
+.step-check {
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+}
+
+.step-label-wrapper {
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.step-status {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #6fe0a8;
+  margin-bottom: 0.15rem;
+}
+
+.step-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progress-indicator {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #4f8bff, #3358ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+  transition: width 0.3s ease;
+}
+
+.progress-hint {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  .home-container {
+    padding: 0 1rem 2rem;
+  }
+
+  .home-content {
+    padding-top: 1rem;
+  }
+
+  .step-track {
+    flex-direction: column;
+  }
+
+  .step-line {
+    display: none;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .ghost-button {
+    width: 100%;
+  }
+}
+
