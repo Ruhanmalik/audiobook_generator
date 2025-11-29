@@ -1,0 +1,37 @@
+# Frontend (not needed for backend)
+frontend/
+node_modules/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Output files (will be created in container)
+output/
+uploads/
+*.mp3
+*.wav
+*.epub
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+README.md
+*.md
+
+# Other
+.DS_Store
+*.log
+
